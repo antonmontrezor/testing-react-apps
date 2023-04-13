@@ -17,6 +17,7 @@ const handlers = [
         return res(
           ctx.delay(delay),
           ctx.status(400),
+          // this line below will be rendered in login-submission where {errorMessage} is
           ctx.json({message: 'username required'}),
         )
       }
