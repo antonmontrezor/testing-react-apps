@@ -3,23 +3,11 @@
 
 import * as React from 'react'
 import {render, screen, act} from '@testing-library/react'
+import {useCurrentPosition} from 'react-use-geolocation'
 import Location from '../../examples/location'
 
-beforeAll(() => {
-  // run the following lines of code before all tests
-  window.navigator.geolocation = {
-    getCurrentPosition: jest.fn(),
-  }
-})
-
-function deferred() {
-  let resolve, reject
-  const promise = new Promise((res, rej) => {
-    resolve = res
-    reject = rej
-  })
-  return {promise, resolve, reject}
-}
+// it'll create for function exports of this module a jest mock functions
+jest.mock('react-use-geolocation')
 
 test('displays the users current location', async () => {
   const fakePosition = {
@@ -29,44 +17,58 @@ test('displays the users current location', async () => {
     },
   }
 
-  const {promise, resolve} = deferred()
+  let setReturnValue
+  function useMockCurrentPosition() {
+    const state = React.useState([])
 
-  // the location component uses useCurrentPosition hook that esentially calls getCurrentPosition like so:
-  // navigator.geolocation.getCurrentPosition(function (position) {
-  //   if (!canceled) {
-  //     setPosition(position);
-  //   }
-  // }, function (error) {
-  //   if (!canceled) {
-  //     setError(error);
-  //   }
-  // }, options);
+    setReturnValue = state[1]
+    return state[0]
+  }
 
-  window.navigator.geolocation.getCurrentPosition.mockImplementation(
-    callback => {
-      promise.then(() => callback(fakePosition))
-    },
-  )
+  useCurrentPosition.mockImplementation(useMockCurrentPosition)
 
   render(<Location />)
+  // if the hook we're mocking useCurrentPosition got called with any ars, we would check if was called with those
+  // const [position, error] = useCurrentPosition('args')
+  // expect(useCurrentPosition).toHaveBeenCalledWith('args')
+  // here's no need to check how many times useCurrentPosition was called since we con't know how many times it would be called by React, and that's fine
   expect(screen.getByLabelText(/loading/i)).toBeInTheDocument()
 
-  await act(async () => {
-    resolve()
-    await promise
+  act(() => {
+    setReturnValue([fakePosition])
   })
-  screen.debug()
 
-  // we are not using getByLabelText since it throw an error if it cannot find an element, but queryByLabelText doesn't
   expect(screen.queryByLabelText(/loading/i)).not.toBeInTheDocument()
-
   expect(screen.getByText(/latitude/i)).toHaveTextContent(
     `Latitude: ${fakePosition.coords.latitude}`,
   )
   expect(screen.getByText(/longitude/i)).toHaveTextContent(
     `Longitude: ${fakePosition.coords.longitude}`,
   )
+})
 
+test('displays an error message', async () => {
+  let setError
+  function useMockCurrentPosition() {
+    const state = React.useState([])
+
+    setError = state[1]
+    return [null, state[0]]
+  }
+
+  useCurrentPosition.mockImplementation(useMockCurrentPosition)
+
+  render(<Location />)
+  screen.debug()
+  expect(screen.getByRole('alert')).toBeInTheDocument()
+
+  act(() => {
+    setError({message: 'Something went wrong'})
+  })
+
+  expect(screen.getByRole('alert').textContent).toMatchInlineSnapshot(
+    `"Something went wrong"`,
+  )
 })
 
 /*
