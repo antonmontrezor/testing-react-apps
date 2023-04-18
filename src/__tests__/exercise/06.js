@@ -50,20 +50,19 @@ test('displays the users current location', async () => {
 test('displays an error message', async () => {
   let setError
   function useMockCurrentPosition() {
-    const state = React.useState([])
+    const [state, setState] = React.useState([null, null])
 
-    setError = state[1]
-    return [null, state[0]]
+    setError = setState
+    return state
   }
 
   useCurrentPosition.mockImplementation(useMockCurrentPosition)
 
   render(<Location />)
-  screen.debug()
-  expect(screen.getByRole('alert')).toBeInTheDocument()
+  expect(screen.getByLabelText(/loading/i)).toBeInTheDocument()
 
   act(() => {
-    setError({message: 'Something went wrong'})
+    setError([null, {message: 'Something went wrong'}])
   })
 
   expect(screen.getByRole('alert').textContent).toMatchInlineSnapshot(
