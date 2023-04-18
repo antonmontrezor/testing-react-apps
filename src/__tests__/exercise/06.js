@@ -48,6 +48,8 @@ test('displays the users current location', async () => {
 })
 
 test('displays an error message', async () => {
+  // specify that we are looking for this particular error message
+  const errorMessage = 'Something went wrong'
   let setError
   function useMockCurrentPosition() {
     const [state, setState] = React.useState([null, null])
@@ -62,7 +64,7 @@ test('displays an error message', async () => {
   expect(screen.getByLabelText(/loading/i)).toBeInTheDocument()
 
   act(() => {
-    setError([null, {message: 'Something went wrong'}])
+    setError([null, {message: errorMessage}])
   })
 
   expect(screen.getByRole('alert').textContent).toMatchInlineSnapshot(
